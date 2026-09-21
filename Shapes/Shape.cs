@@ -1,4 +1,4 @@
-﻿using Box_collider;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 internal class Shape<T>
@@ -9,6 +9,11 @@ internal class Shape<T>
     private int VertexCount;
 
     private Camera _camera;
+
+    // Object transform
+    public Vector3 Position = Vector3.Zero;
+    public Vector3 Rotation = Vector3.Zero;
+    public Vector3 Scale = Vector3.One;
 
     public Shape(GraphicsDevice graphics, Camera camera, T[] vertices)
     {
@@ -29,6 +34,17 @@ internal class Shape<T>
 
     public void Draw(BasicEffect effect, PrimitiveType primitiveType)
     {
+        Matrix scale = Matrix.CreateScale(Scale);
+
+        Matrix rotation =
+            Matrix.CreateRotationX(Rotation.X)
+            * Matrix.CreateRotationY(Rotation.Y)
+            * Matrix.CreateRotationZ(Rotation.Z);
+
+        Matrix translation = Matrix.CreateTranslation(Position);
+
+        effect.World = scale * rotation * translation;
+
         effect.View = _camera.View;
         effect.Projection = _camera.Projection;
 

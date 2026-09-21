@@ -26,3 +26,6 @@ modelling software or by you
 
 * Transformations -> scale, rotation, translations
 * non indexed rendering -> picking 3 vertices linearly at a time and forming triangle
+
+
+* Ensure -> texture format is set to color and generate minimaps is enabled in `mgcb editor`

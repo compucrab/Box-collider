@@ -58,7 +58,12 @@ namespace Box_collider
             ShapeData.DeltaTime = dt;
             rotation += dt * 2;
 
-            effect.World = Matrix.CreateRotationZ(rotation);
+            float speed = 0.5f;
+
+            cube.Scale += Vector3.One * dt;
+
+            if (cube.Scale.X >= 3f)
+                cube.Scale = Vector3.One * speed * 3f;
 
             KeyboardManager.Update();
             MouseManager.Update();
@@ -72,8 +77,8 @@ namespace Box_collider
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-
             cube.Draw(effect, PrimitiveType.TriangleList);
+
             ground.Draw(groundEffect, PrimitiveType.TriangleList);
 
             base.Draw(gameTime);
