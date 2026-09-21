@@ -1,6 +1,5 @@
 ﻿using System;
 using Box_collider.Helpers;
-using Box_collider.Shapes;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -32,7 +31,6 @@ internal class Camera
         _graphics = graphics;
 
         Position = new Vector3(0, -8, 5);
-
         Forward = Vector3.UnitY;
         Right = Vector3.UnitX;
         Up = Vector3.UnitZ;
@@ -60,7 +58,7 @@ internal class Camera
 
     private void Move(Vector3 direction)
     {
-        Position += direction * Speed * ShapeData.DeltaTime;
+        Position += direction * Speed * Globals.DeltaTime;
     }
 
     public void Update()

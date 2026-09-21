@@ -1,13 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Box_collider.Shapes
+namespace Box_collider.Helpers
 {
     // no index buffer used - rendered via non indexed rendering
     // GraphicsDevice.DrawPrimitives(PrimitiveType.TriangleList, 0, 12);
 
-    internal static class ShapeData
+    internal static class Globals
     {
+        // global data storage so that data is accessible from anywhere
+
         public static VertexPositionColor[] maincube =
         {
             // FRONT

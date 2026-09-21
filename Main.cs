@@ -1,36 +1,45 @@
 ﻿using Box_collider.Helpers;
-using Box_collider.Shapes;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Myra.Graphics2D.UI;
 
 namespace Box_collider
 {
     public class Main : Game
     {
-        private GraphicsDeviceManager _graphics;
+        GraphicsDeviceManager _graphics;
 
-        private BasicEffect effect;
-        private BasicEffect groundEffect;
+        BasicEffect effect;
+        BasicEffect groundEffect;
 
-        private Shape<VertexPositionColor> cube;
-        private Shape<VertexPositionTexture> ground;
+        Shape<VertexPositionColor> cube;
+        Shape<VertexPositionTexture> ground;
 
-        float rotation = 0f;
+        Camera camera;
+        DebugUI debugUI;
 
-        private Camera camera;
+        Label fpscounter;
+
+        private float fpsTimer = 0f;
+        private int frameCount = 0;
 
         public Main()
         {
             _graphics = new GraphicsDeviceManager(this);
+
+            // for uncapped fps enable the following 👇
+            //_graphics.SynchronizeWithVerticalRetrace = false;
+            //IsFixedTimeStep = false;
+
             Content.RootDirectory = "Content";
+
             IsMouseVisible = true;
         }
 
         protected override void Initialize()
         {
-            GraphicsDevice.RasterizerState = new RasterizerState { CullMode = CullMode.None };
-            _graphics.PreferredBackBufferWidth = 960;
-            _graphics.PreferredBackBufferHeight = 720;
+            _graphics.PreferredBackBufferWidth = 1280;
+            _graphics.PreferredBackBufferHeight = 960;
 
             _graphics.ApplyChanges();
             base.Initialize();
@@ -40,30 +49,49 @@ namespace Box_collider
         {
             camera = new Camera(GraphicsDevice);
 
-            cube = new Shape<VertexPositionColor>(GraphicsDevice, camera, ShapeData.maincube);
-            ground = new Shape<VertexPositionTexture>(GraphicsDevice, camera, ShapeData.ground);
+            cube = new Shape<VertexPositionColor>(GraphicsDevice, camera, Globals.maincube);
+            ground = new Shape<VertexPositionTexture>(GraphicsDevice, camera, Globals.ground);
 
-            effect = new BasicEffect(GraphicsDevice);
-            effect.VertexColorEnabled = true;
+            effect = new BasicEffect(GraphicsDevice) { VertexColorEnabled = true };
 
-            groundEffect = new BasicEffect(GraphicsDevice);
-            groundEffect.TextureEnabled = true;
-            groundEffect.Texture = Content.Load<Texture2D>("texture");
+            groundEffect = new BasicEffect(GraphicsDevice)
+            {
+                TextureEnabled = true,
+                Texture = Content.Load<Texture2D>("texture"),
+            };
+            debugUI = new DebugUI(this);
+            fpscounter = debugUI.AddLabel("FPS count : 0");
+
+            debugUI.AddSlider(
+                "Cube Scale",
+                1,
+                5,
+                value =>
+                {
+                    cube.Scale = Vector3.One * value;
+                }
+            );
+
+            debugUI.AddButton("Reset", () => cube.Scale = Vector3.One);
         }
 
         protected override void Update(GameTime gameTime)
         {
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            fpsTimer += dt;
+            frameCount++;
 
-            ShapeData.DeltaTime = dt;
-            rotation += dt * 2;
+            if (fpsTimer >= 1f)
+            {
+                float fps = frameCount / fpsTimer;
 
-            float speed = 0.5f;
+                fpscounter.Text = $"FPS: {fps:0}";
 
-            cube.Scale += Vector3.One * dt;
+                fpsTimer = 0f;
+                frameCount = 0;
+            }
 
-            if (cube.Scale.X >= 3f)
-                cube.Scale = Vector3.One * speed * 3f;
+            Globals.DeltaTime = dt;
 
             KeyboardManager.Update();
             MouseManager.Update();
@@ -76,10 +104,14 @@ namespace Box_collider
 
         protected override void Draw(GameTime gameTime)
         {
+            GraphicsDevice.DepthStencilState = DepthStencilState.Default;
+            GraphicsDevice.SamplerStates[0] = SamplerState.AnisotropicWrap;
+
             GraphicsDevice.Clear(Color.CornflowerBlue);
             cube.Draw(effect, PrimitiveType.TriangleList);
 
             ground.Draw(groundEffect, PrimitiveType.TriangleList);
+            debugUI.Draw();
 
             base.Draw(gameTime);
         }
