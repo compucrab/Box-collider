@@ -5,15 +5,13 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 /*
- * View and Projection Matrix Fundamentals:
- * - View matrix: Defines camera position and orientation (Where is the eye, and where is it looking?).
- * - Projection matrix: Translates 3D world coordinates onto the 2D display viewport (Perspective/FOV).
+ * View matrix: Defines camera position and orientation (Where is the eye, and where is it looking?).
+ * Projection matrix: Translates 3D world coordinates onto the 2D display viewport (Perspective/FOV).
  */
+
 internal class Camera
 {
     private readonly GraphicsDevice _graphics;
-
-    #region Transform & Direction Vectors
 
     public Vector3 Position;
     private Vector3 _targetPosition;
@@ -22,42 +20,25 @@ internal class Camera
     public Vector3 Forward = Vector3.UnitY; // +Y is forward
     public Vector3 Right = Vector3.UnitX; // +X is right
     public Vector3 Up = Vector3.UnitZ; // +Z is up
-    #endregion
-
-    #region Matrices
 
     public Matrix View;
     public Matrix Projection;
-
-    #endregion
-
-    #region Rotation Settings & State
 
     private float _yaw = 0f;
     private float _pitch = 0f;
     private float _targetYaw = 0f;
     private float _targetPitch = 0f;
 
-    public float RotationSpeed = 0.005f;
+    public float RotationSpeed = 0.003f;
     public float RotationSmoothness = 8f;
 
-    #endregion
-
-    #region Translation & Zoom Settings
-
-    public float MoveSpeed = 5f;
-    public float PanSpeed = 0.05f;
-    public float ZoomSpeed = 0.05f;
-    public float PanSmoothness = 10f;
-
-    #endregion
-
-    #region Internal State Flags
+    public float MoveSpeed = 10f;
+    public float PanSpeed = 0.03f;
+    public float ZoomSpeed = 0.03f;
+    public float PanSmoothness = 5f;
 
     private bool _isOrbiting = false;
     private bool _isPanning = false;
-
-    #endregion
 
     public Camera(GraphicsDevice graphics)
     {
@@ -114,7 +95,7 @@ internal class Camera
         // Input state checks
         bool isAltHeld = KeyboardManager.IsHeld(Keys.LeftAlt);
         bool isShiftHeld = KeyboardManager.IsHeld(Keys.LeftShift);
-        bool isLeftClick = MouseManager.LeftPressed;
+        bool isLeftClick = MouseManager.LeftHeld;
 
         bool panInput = isShiftHeld && isAltHeld && isLeftClick;
         bool orbitInput = isAltHeld && !isShiftHeld && isLeftClick;
@@ -225,5 +206,31 @@ internal class Camera
     public void UpdateView()
     {
         View = Matrix.CreateLookAt(Position, Position + Forward, Up);
+    }
+
+    public Ray GetMouseRay(Point mousePosition)
+    {
+        Vector3 nearPoint = new Vector3(mousePosition.X, mousePosition.Y, 0f);
+
+        Vector3 farPoint = new Vector3(mousePosition.X, mousePosition.Y, 1f);
+
+        Vector3 nearWorld = _graphics.Viewport.Unproject(
+            nearPoint,
+            Projection,
+            View,
+            Matrix.Identity
+        );
+
+        Vector3 farWorld = _graphics.Viewport.Unproject(
+            farPoint,
+            Projection,
+            View,
+            Matrix.Identity
+        );
+
+        Vector3 direction = farWorld - nearWorld;
+        direction.Normalize();
+
+        return new Ray(nearWorld, direction);
     }
 }

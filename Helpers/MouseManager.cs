@@ -11,13 +11,17 @@ namespace Box_collider.Helpers
         public static Point Position => currentState.Position;
         public static Point Delta => currentState.Position - previousState.Position;
 
-        public static bool LeftPressed => currentState.LeftButton == ButtonState.Pressed;
-        public static bool RightPressed => currentState.RightButton == ButtonState.Pressed;
+        public static bool LeftHeld => currentState.LeftButton == ButtonState.Pressed;
+        public static bool RightHeld => currentState.RightButton == ButtonState.Pressed;
 
         public static int ScrollWheelValue => currentState.ScrollWheelValue;
 
         public static int ScrollWheelDelta =>
             currentState.ScrollWheelValue - previousState.ScrollWheelValue;
+
+        public static bool LeftClicked =>
+            currentState.LeftButton == ButtonState.Pressed
+            && previousState.LeftButton == ButtonState.Released;
 
         public static void Update()
         {
