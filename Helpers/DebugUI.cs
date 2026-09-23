@@ -5,14 +5,14 @@ using Myra.Graphics2D;
 using Myra.Graphics2D.Brushes;
 using Myra.Graphics2D.UI;
 
-internal class DebugUI
+internal static class DebugUI
 {
-    public Desktop Desktop { get; private set; }
+    public static Desktop Desktop { get; private set; }
 
-    private Panel _panel;
-    private VerticalStackPanel _content;
+    private static Panel _panel;
+    private static VerticalStackPanel _content;
 
-    public DebugUI(Game game)
+    public static void Initialize(Game game)
     {
         MyraEnvironment.Game = game;
 
@@ -47,14 +47,19 @@ internal class DebugUI
         scrollViewer.Content = _content;
     }
 
-    public Label AddLabel(string text)
+    public static Label AddLabel(string text)
     {
         var label = new Label { Text = text };
         _content.Widgets.Add(label);
         return label;
     }
 
-    public HorizontalSlider AddSlider(string name, float min, float max, Action<float> onChanged)
+    public static HorizontalSlider AddSlider(
+        string name,
+        float min,
+        float max,
+        Action<float> onChanged
+    )
     {
         var row = new VerticalStackPanel { Spacing = 5 };
 
@@ -82,7 +87,7 @@ internal class DebugUI
         return slider;
     }
 
-    public void AddButton(string text, Action onClick)
+    public static void AddButton(string text, Action onClick)
     {
         var button = new Button
         {
@@ -100,7 +105,7 @@ internal class DebugUI
         _content.Widgets.Add(button);
     }
 
-    public void Draw()
+    public static void Draw()
     {
         Desktop.Render();
     }

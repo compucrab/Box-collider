@@ -4,9 +4,16 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+/* view and projection matrix belongs to camera
+ * view matrix - Where is the player's eye standing, and where is it looking?
+ * projection matrix - How does the 3D world flatten onto a 2D monitor screen?
+ */
+
 internal class Camera
 {
     public Vector3 Position;
+
+    //3 directions to determine camera's orientation
 
     public Vector3 Forward;
     public Vector3 Right;
@@ -21,6 +28,7 @@ internal class Camera
     private float pitch = 0f;
 
     private float RotationSpeed = 0.003f;
+    public float PanSpeed = 0.05f;
 
     private GraphicsDevice _graphics;
 
@@ -30,16 +38,17 @@ internal class Camera
     {
         _graphics = graphics;
 
-        Position = new Vector3(0, -8, 5);
-        Forward = Vector3.UnitY;
-        Right = Vector3.UnitX;
-        Up = Vector3.UnitZ;
+        Position = new Vector3(0, -23, 5);
+
+        Forward = Vector3.UnitY; // y is foward
+        Right = Vector3.UnitX; // x is right
+        Up = Vector3.UnitZ; // z is up
 
         Projection = Matrix.CreatePerspectiveFieldOfView(
-            MathHelper.ToRadians(60),
+            MathHelper.ToRadians(60), // The camera can see a 60° wide vertical field of view.
             graphics.Viewport.AspectRatio,
-            0.1f,
-            100f
+            0.1f, // Don't render objects closer than 0.1 units from the camera
+            100f // Don't render objects farther than 100 units from the camera
         );
 
         UpdateView();
@@ -65,7 +74,16 @@ internal class Camera
     {
         bool orbitInput = KeyboardManager.IsHeld(Keys.LeftAlt) && MouseManager.LeftPressed;
 
-        if (orbitInput)
+        bool panInput =
+            KeyboardManager.IsHeld(Keys.LeftShift)
+            && KeyboardManager.IsHeld(Keys.LeftAlt)
+            && MouseManager.LeftPressed;
+
+        if (panInput)
+        {
+            Pan();
+        }
+        else if (orbitInput)
         {
             if (!orbiting)
             {
@@ -75,7 +93,7 @@ internal class Camera
 
             Point delta = MouseManager.Delta;
 
-            yaw -= delta.X * RotationSpeed;
+            yaw += delta.X * RotationSpeed;
             pitch -= delta.Y * RotationSpeed;
         }
         else
@@ -94,23 +112,52 @@ internal class Camera
         return new Point(_graphics.Viewport.Width / 2, _graphics.Viewport.Height / 2);
     }
 
+    private void Pan()
+    {
+        if (!orbiting)
+        {
+            orbiting = true;
+            MouseManager.ResetPosition(MouseCenter());
+            return;
+        }
+
+        Point delta = MouseManager.Delta;
+
+        Position += Right * -delta.X * PanSpeed;
+        Position += Up * delta.Y * PanSpeed;
+    }
+
     private void UpdateDirection()
     {
-        Forward = new Vector3(
-            MathF.Sin(yaw) * MathF.Cos(pitch),
-            MathF.Cos(yaw) * MathF.Cos(pitch),
-            MathF.Sin(pitch)
-        );
+        // pitch controls up and down
+        float cosPitch = MathF.Cos(pitch);
+        float sinPitch = MathF.Sin(pitch);
 
-        Forward.Normalize();
+        // yaw controls left right
+        float sinYaw = MathF.Sin(yaw);
+        float cosYaw = MathF.Cos(yaw);
 
-        Right = Vector3.Normalize(Vector3.Cross(Vector3.UnitZ, Forward));
+        /*
+         * Forward = Vector3(X,Y,Z)
+         * X = horizontal X × horizontal amount of pitch
+         * Y = horizontal Y × horizontal amount of pitch
+         * Z = vertical amount
+         * we multiplied horizontal amount of pitch because it affects the yaw directly
+        */
 
-        Up = Vector3.Normalize(Vector3.Cross(Forward, Right));
+        Forward = new Vector3(sinYaw * cosPitch, cosYaw * cosPitch, sinPitch);
+        Forward.Normalize(); // make length 1 unit
+
+        Right = new Vector3(cosYaw, -sinYaw, 0); // length already 1 unit
+
+        // Find a direction that is perpendicular to both Right and Forward.
+        Up = Vector3.Cross(Right, Forward); // order matters else it would be opposite direction
+        Up.Normalize(); // make length 1 unit
     }
 
     public void UpdateView()
     {
+        // parameters (camera's position, target position, up direction)
         View = Matrix.CreateLookAt(Position, Position + Forward, Up);
     }
 }

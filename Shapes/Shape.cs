@@ -5,7 +5,7 @@ internal class Shape<T>
     where T : struct, IVertexType
 {
     private GraphicsDevice _graphics;
-    private VertexBuffer _vertexBuffer;
+    private VertexBuffer _vertexBuffer; // holds geometry data
     private int VertexCount;
 
     private Camera _camera;
@@ -32,7 +32,7 @@ internal class Shape<T>
         VertexCount = vertices.Length;
     }
 
-    public void Draw(BasicEffect effect, PrimitiveType primitiveType)
+    public void Draw(BasicEffect effect, PrimitiveType primitiveType = PrimitiveType.TriangleList)
     {
         Matrix scale = Matrix.CreateScale(Scale);
 
@@ -43,17 +43,22 @@ internal class Shape<T>
 
         Matrix translation = Matrix.CreateTranslation(Position);
 
-        effect.World = scale * rotation * translation;
+        /*
+         * world matrix belongs to object
+         * world matrix = scale x rotation x position (strictly)
+         */
 
+        effect.World = scale * rotation * translation;
         effect.View = _camera.View;
         effect.Projection = _camera.Projection;
 
+        // for the next drawing use this vertex buffer
         _graphics.SetVertexBuffer(_vertexBuffer);
 
+        // pass vertex data to GPU
         foreach (EffectPass pass in effect.CurrentTechnique.Passes)
         {
             pass.Apply();
-
             _graphics.DrawPrimitives(primitiveType, 0, VertexCount / 3);
         }
     }

@@ -43,3 +43,7 @@ Projection -> How does the camera see/project it?
 ## debug UI
 * basic `Myra UI` setup to display debug info
 * added via `Manage nuget packages`
+
+
+## Rendering structure
+![structure]("./images/structure.png")

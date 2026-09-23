@@ -9,6 +9,10 @@ namespace Box_collider
     {
         GraphicsDeviceManager _graphics;
 
+        /*
+         * BasicEffect is basically a ready-made shader/effect provided by MonoGame.
+         * The thing that tells the GPU how to turn vertex data into visible pixels.
+         */
         BasicEffect effect;
         BasicEffect groundEffect;
 
@@ -16,9 +20,9 @@ namespace Box_collider
         Shape<VertexPositionTexture> ground;
 
         Camera camera;
-        DebugUI debugUI;
 
         Label fpscounter;
+        Label camera_position;
 
         private float fpsTimer = 0f;
         private int frameCount = 0;
@@ -59,10 +63,11 @@ namespace Box_collider
                 TextureEnabled = true,
                 Texture = Content.Load<Texture2D>("texture"),
             };
-            debugUI = new DebugUI(this);
-            fpscounter = debugUI.AddLabel("FPS count : 0");
 
-            debugUI.AddSlider(
+            DebugUI.Initialize(this);
+
+            fpscounter = DebugUI.AddLabel("FPS count : 0");
+            DebugUI.AddSlider(
                 "Cube Scale",
                 1,
                 5,
@@ -72,7 +77,18 @@ namespace Box_collider
                 }
             );
 
-            debugUI.AddButton("Reset", () => cube.Scale = Vector3.One);
+            DebugUI.AddSlider(
+                "Ground position",
+                -5,
+                0,
+                value =>
+                {
+                    ground.Position.Z = value;
+                }
+            );
+
+            camera_position = DebugUI.AddLabel("Camera position ");
+            DebugUI.AddButton("Reset", () => cube.Scale = Vector3.One);
         }
 
         protected override void Update(GameTime gameTime)
@@ -91,6 +107,9 @@ namespace Box_collider
                 frameCount = 0;
             }
 
+            camera_position.Text =
+                $"Camera Position :\nX : {camera.Position.X} \nY : {camera.Position.Y} \nZ : {camera.Position.Z}";
+
             Globals.DeltaTime = dt;
 
             KeyboardManager.Update();
@@ -108,10 +127,10 @@ namespace Box_collider
             GraphicsDevice.SamplerStates[0] = SamplerState.AnisotropicWrap;
 
             GraphicsDevice.Clear(Color.CornflowerBlue);
-            cube.Draw(effect, PrimitiveType.TriangleList);
+            cube.Draw(effect);
+            ground.Draw(groundEffect);
 
-            ground.Draw(groundEffect, PrimitiveType.TriangleList);
-            debugUI.Draw();
+            DebugUI.Draw();
 
             base.Draw(gameTime);
         }

@@ -45,6 +45,17 @@ namespace Box_collider.Helpers
             return currentState.IsKeyDown(key);
         }
 
+        public static bool AreHeld(params Keys[] keys)
+        {
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (!currentState.IsKeyDown(keys[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
         public static void Update()
         {
             previousState = currentState;
