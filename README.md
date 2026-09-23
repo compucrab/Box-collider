@@ -1,7 +1,8 @@
 # Box Collider
 
-Basic 3D game in monogame implementing following 3D concepts
+Basic 3D box collision in monogame implementing following 3D concepts
 
+![ss](./images/home.png)
 
 ## Coordinate system
 * Z up coordinate system -> `+x` (right), `+z` (up) ,`+y` (towards viewer)
