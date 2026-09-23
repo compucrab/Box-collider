@@ -4,160 +4,226 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-/* view and projection matrix belongs to camera
- * view matrix - Where is the player's eye standing, and where is it looking?
- * projection matrix - How does the 3D world flatten onto a 2D monitor screen?
+/*
+ * View and Projection Matrix Fundamentals:
+ * - View matrix: Defines camera position and orientation (Where is the eye, and where is it looking?).
+ * - Projection matrix: Translates 3D world coordinates onto the 2D display viewport (Perspective/FOV).
  */
-
 internal class Camera
 {
+    private readonly GraphicsDevice _graphics;
+
+    #region Transform & Direction Vectors
+
     public Vector3 Position;
+    private Vector3 _targetPosition;
 
-    //3 directions to determine camera's orientation
+    // 3 orthogonal unit vectors determining camera orientation (Z-Up coordinate system)
+    public Vector3 Forward = Vector3.UnitY; // +Y is forward
+    public Vector3 Right = Vector3.UnitX; // +X is right
+    public Vector3 Up = Vector3.UnitZ; // +Z is up
+    #endregion
 
-    public Vector3 Forward;
-    public Vector3 Right;
-    public Vector3 Up;
+    #region Matrices
 
     public Matrix View;
     public Matrix Projection;
 
-    public float Speed = 5f;
+    #endregion
 
-    private float yaw = 0f;
-    private float pitch = 0f;
+    #region Rotation Settings & State
 
-    private float RotationSpeed = 0.003f;
+    private float _yaw = 0f;
+    private float _pitch = 0f;
+    private float _targetYaw = 0f;
+    private float _targetPitch = 0f;
+
+    public float RotationSpeed = 0.005f;
+    public float RotationSmoothness = 8f;
+
+    #endregion
+
+    #region Translation & Zoom Settings
+
+    public float MoveSpeed = 5f;
     public float PanSpeed = 0.05f;
+    public float ZoomSpeed = 0.05f;
+    public float PanSmoothness = 10f;
 
-    private GraphicsDevice _graphics;
+    #endregion
 
-    private bool orbiting = false;
+    #region Internal State Flags
+
+    private bool _isOrbiting = false;
+    private bool _isPanning = false;
+
+    #endregion
 
     public Camera(GraphicsDevice graphics)
     {
         _graphics = graphics;
 
+        // Default initial camera placement facing forward along +Y
         Position = new Vector3(0, -23, 5);
+        _targetPosition = Position;
 
-        Forward = Vector3.UnitY; // y is foward
-        Right = Vector3.UnitX; // x is right
-        Up = Vector3.UnitZ; // z is up
-
+        // Setup perspective projection (60 deg vertical FOV, near/far clipping planes)
         Projection = Matrix.CreatePerspectiveFieldOfView(
-            MathHelper.ToRadians(60), // The camera can see a 60° wide vertical field of view.
-            graphics.Viewport.AspectRatio,
-            0.1f, // Don't render objects closer than 0.1 units from the camera
-            100f // Don't render objects farther than 100 units from the camera
+            MathHelper.ToRadians(60f),
+            _graphics.Viewport.AspectRatio,
+            0.1f,
+            100f
         );
 
-        UpdateView();
-
-        KeyboardManager.RegisterHeld(Keys.Up, () => Move(Forward));
-        KeyboardManager.RegisterHeld(Keys.Down, () => Move(-Forward));
-        KeyboardManager.RegisterHeld(Keys.Left, () => Move(-Right));
-        KeyboardManager.RegisterHeld(Keys.Right, () => Move(Right));
-
-        KeyboardManager.RegisterHeld(Keys.S, () => Move(Forward));
-        KeyboardManager.RegisterHeld(Keys.D, () => Move(-Forward));
-
-        KeyboardManager.RegisterHeld(Keys.Space, () => Move(Up));
-        KeyboardManager.RegisterHeld(Keys.LeftControl, () => Move(-Up));
-    }
-
-    private void Move(Vector3 direction)
-    {
-        Position += direction * Speed * Globals.DeltaTime;
-    }
-
-    public void Update()
-    {
-        bool orbitInput = KeyboardManager.IsHeld(Keys.LeftAlt) && MouseManager.LeftPressed;
-
-        bool panInput =
-            KeyboardManager.IsHeld(Keys.LeftShift)
-            && KeyboardManager.IsHeld(Keys.LeftAlt)
-            && MouseManager.LeftPressed;
-
-        if (panInput)
-        {
-            Pan();
-        }
-        else if (orbitInput)
-        {
-            if (!orbiting)
-            {
-                orbiting = true;
-                MouseManager.ResetPosition(MouseCenter());
-            }
-
-            Point delta = MouseManager.Delta;
-
-            yaw += delta.X * RotationSpeed;
-            pitch -= delta.Y * RotationSpeed;
-        }
-        else
-        {
-            orbiting = false;
-        }
-
-        pitch = MathHelper.Clamp(pitch, MathHelper.ToRadians(-89f), MathHelper.ToRadians(89f));
-
+        RegisterKeyboardMovement();
         UpdateDirection();
         UpdateView();
     }
 
-    private Point MouseCenter()
+    private void RegisterKeyboardMovement()
     {
-        return new Point(_graphics.Viewport.Width / 2, _graphics.Viewport.Height / 2);
+        // Directional translation
+        KeyboardManager.RegisterHeld(Keys.Up, () => MoveTarget(Forward));
+        KeyboardManager.RegisterHeld(Keys.Down, () => MoveTarget(-Forward));
+        KeyboardManager.RegisterHeld(Keys.Left, () => MoveTarget(-Right));
+        KeyboardManager.RegisterHeld(Keys.Right, () => MoveTarget(Right));
+
+        KeyboardManager.RegisterHeld(Keys.S, () => MoveTarget(Forward));
+        KeyboardManager.RegisterHeld(Keys.D, () => MoveTarget(-Forward));
+
+        // Elevation translation
+        KeyboardManager.RegisterHeld(Keys.Space, () => MoveTarget(Up));
+        KeyboardManager.RegisterHeld(Keys.LeftControl, () => MoveTarget(-Up));
     }
 
-    private void Pan()
+    private void MoveTarget(Vector3 direction)
     {
-        if (!orbiting)
+        _targetPosition += direction * MoveSpeed * Globals.DeltaTime;
+    }
+
+    public void Update()
+    {
+        HandleMouseInput();
+        ApplySmoothing();
+        UpdateDirection();
+        UpdateView();
+    }
+
+    private void HandleMouseInput()
+    {
+        // Input state checks
+        bool isAltHeld = KeyboardManager.IsHeld(Keys.LeftAlt);
+        bool isShiftHeld = KeyboardManager.IsHeld(Keys.LeftShift);
+        bool isLeftClick = MouseManager.LeftPressed;
+
+        bool panInput = isShiftHeld && isAltHeld && isLeftClick;
+        bool orbitInput = isAltHeld && !isShiftHeld && isLeftClick;
+
+        // 1. Pan Handling
+        if (panInput)
         {
-            orbiting = true;
-            MouseManager.ResetPosition(MouseCenter());
+            ProcessPan();
+            _isOrbiting = false;
+        }
+        // 2. Orbit Handling
+        else if (orbitInput)
+        {
+            ProcessOrbit();
+            _isPanning = false;
+        }
+        // Reset drag states when inputs released
+        else
+        {
+            _isOrbiting = false;
+            _isPanning = false;
+        }
+
+        // 3. Mouse Wheel Zoom Handling
+        int wheelDelta = MouseManager.ScrollWheelDelta;
+        if (wheelDelta != 0)
+        {
+            _targetPosition += Forward * wheelDelta * ZoomSpeed;
+        }
+    }
+
+    private void ProcessPan()
+    {
+        if (!_isPanning)
+        {
+            _isPanning = true;
             return;
         }
 
         Point delta = MouseManager.Delta;
 
-        Position += Right * -delta.X * PanSpeed;
-        Position += Up * delta.Y * PanSpeed;
+        // Move target position across local Right and Up camera vectors
+        _targetPosition += Right * (-delta.X * PanSpeed);
+        _targetPosition += Up * (delta.Y * PanSpeed);
     }
 
+    private void ProcessOrbit()
+    {
+        if (!_isOrbiting)
+        {
+            _isOrbiting = true;
+            return;
+        }
+
+        Point delta = MouseManager.Delta;
+
+        _targetYaw += delta.X * RotationSpeed;
+        _targetPitch -= delta.Y * RotationSpeed;
+
+        // Clamp pitch to prevent camera flipping upside down (-89 to +89 degrees)
+        _targetPitch = MathHelper.Clamp(
+            _targetPitch,
+            MathHelper.ToRadians(-89f),
+            MathHelper.ToRadians(89f)
+        );
+    }
+
+    private void ApplySmoothing()
+    {
+        // Frame-rate independent exponential interpolation factors
+        float rotationFactor = 1f - MathF.Exp(-RotationSmoothness * Globals.DeltaTime);
+        float panFactor = 1f - MathF.Exp(-PanSmoothness * Globals.DeltaTime);
+
+        // Smooth rotation
+        _yaw = MathHelper.Lerp(_yaw, _targetYaw, rotationFactor);
+        _pitch = MathHelper.Lerp(_pitch, _targetPitch, rotationFactor);
+
+        // Smooth translation
+        Position = Vector3.Lerp(Position, _targetPosition, panFactor);
+    }
+
+    // Recomputes Forward, Right, and Up orientation vectors based on pitch and yaw angles.
     private void UpdateDirection()
     {
-        // pitch controls up and down
-        float cosPitch = MathF.Cos(pitch);
-        float sinPitch = MathF.Sin(pitch);
-
-        // yaw controls left right
-        float sinYaw = MathF.Sin(yaw);
-        float cosYaw = MathF.Cos(yaw);
+        float cosPitch = MathF.Cos(_pitch);
+        float sinPitch = MathF.Sin(_pitch);
+        float sinYaw = MathF.Sin(_yaw);
+        float cosYaw = MathF.Cos(_yaw);
 
         /*
-         * Forward = Vector3(X,Y,Z)
-         * X = horizontal X × horizontal amount of pitch
-         * Y = horizontal Y × horizontal amount of pitch
-         * Z = vertical amount
-         * we multiplied horizontal amount of pitch because it affects the yaw directly
-        */
-
+         * Calculating local forward vector relative to spherical yaw/pitch coordinates:
+         * X = horizontal component * cosine pitch scaling
+         * Y = vertical component * cosine pitch scaling
+         * Z = pitch elevation
+         */
         Forward = new Vector3(sinYaw * cosPitch, cosYaw * cosPitch, sinPitch);
-        Forward.Normalize(); // make length 1 unit
+        Forward.Normalize();
 
-        Right = new Vector3(cosYaw, -sinYaw, 0); // length already 1 unit
+        // Right vector lies purely on the XY horizontal plane (Z=0)
+        Right = new Vector3(cosYaw, -sinYaw, 0f);
 
-        // Find a direction that is perpendicular to both Right and Forward.
-        Up = Vector3.Cross(Right, Forward); // order matters else it would be opposite direction
-        Up.Normalize(); // make length 1 unit
+        // Right-handed perpendicular up vector via cross product
+        Up = Vector3.Cross(Right, Forward);
+        Up.Normalize();
     }
 
+    // Rebuilds the View matrix targeting Position looking along Forward vector.
     public void UpdateView()
     {
-        // parameters (camera's position, target position, up direction)
         View = Matrix.CreateLookAt(Position, Position + Forward, Up);
     }
 }

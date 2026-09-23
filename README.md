@@ -46,4 +46,4 @@ Projection -> How does the camera see/project it?
 
 
 ## Rendering structure
-![structure]("./images/structure.png")
+![structure](./images/structure.png)

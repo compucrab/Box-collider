@@ -125,6 +125,7 @@ namespace Box_collider
         {
             GraphicsDevice.DepthStencilState = DepthStencilState.Default;
             GraphicsDevice.SamplerStates[0] = SamplerState.AnisotropicWrap;
+            GraphicsDevice.RasterizerState = RasterizerState.CullNone;
 
             GraphicsDevice.Clear(Color.CornflowerBlue);
             cube.Draw(effect);
